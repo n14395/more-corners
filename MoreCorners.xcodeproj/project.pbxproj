@@ -1,0 +1,270 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		ABCD1234ABCD1234ABCD0101 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD1234ABCD1234ABCD0001 /* main.swift */; };
+		ABCD1234ABCD1234ABCD0102 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD1234ABCD1234ABCD0002 /* AppDelegate.swift */; };
+		ABCD1234ABCD1234ABCD0103 /* Model.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD1234ABCD1234ABCD0003 /* Model.swift */; };
+		ABCD1234ABCD1234ABCD0104 /* CornerMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD1234ABCD1234ABCD0004 /* CornerMonitor.swift */; };
+		ABCD1234ABCD1234ABCD0105 /* ActionRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD1234ABCD1234ABCD0005 /* ActionRunner.swift */; };
+		ABCD1234ABCD1234ABCD0106 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD1234ABCD1234ABCD0006 /* SettingsView.swift */; };
+		ABCD1234ABCD1234ABCD0107 /* SystemHotCorners.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD1234ABCD1234ABCD0007 /* SystemHotCorners.swift */; };
+		ABCD1234ABCD1234ABCD0108 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = ABCD1234ABCD1234ABCD000A /* AppIcon.icns */; };
+		ABCD1234ABCD1234ABCD0109 /* CornerTrigger.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD1234ABCD1234ABCD000B /* CornerTrigger.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		ABCD1234ABCD1234ABCD0001 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		ABCD1234ABCD1234ABCD0002 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = ../MoreCornersCore/AppDelegate.swift; sourceTree = "<group>"; };
+		ABCD1234ABCD1234ABCD0003 /* Model.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Model.swift; path = ../MoreCornersCore/Model.swift; sourceTree = "<group>"; };
+		ABCD1234ABCD1234ABCD0004 /* CornerMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CornerMonitor.swift; path = ../MoreCornersCore/CornerMonitor.swift; sourceTree = "<group>"; };
+		ABCD1234ABCD1234ABCD0005 /* ActionRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActionRunner.swift; path = ../MoreCornersCore/ActionRunner.swift; sourceTree = "<group>"; };
+		ABCD1234ABCD1234ABCD0006 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = ../MoreCornersCore/SettingsView.swift; sourceTree = "<group>"; };
+		ABCD1234ABCD1234ABCD0007 /* SystemHotCorners.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SystemHotCorners.swift; path = ../MoreCornersCore/SystemHotCorners.swift; sourceTree = "<group>"; };
+		ABCD1234ABCD1234ABCD000B /* CornerTrigger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CornerTrigger.swift; path = ../MoreCornersCore/CornerTrigger.swift; sourceTree = "<group>"; };
+		ABCD1234ABCD1234ABCD0008 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		ABCD1234ABCD1234ABCD0009 /* MoreCorners.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MoreCorners.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		ABCD1234ABCD1234ABCD000A /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		ABCD1234ABCD1234ABCD0302 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		ABCD1234ABCD1234ABCD0201 = {
+			isa = PBXGroup;
+			children = (
+				ABCD1234ABCD1234ABCD0202 /* MoreCorners */,
+				ABCD1234ABCD1234ABCD0008 /* Info.plist */,
+				ABCD1234ABCD1234ABCD000A /* AppIcon.icns */,
+				ABCD1234ABCD1234ABCD0203 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		ABCD1234ABCD1234ABCD0202 /* MoreCorners */ = {
+			isa = PBXGroup;
+			children = (
+				ABCD1234ABCD1234ABCD0001 /* main.swift */,
+				ABCD1234ABCD1234ABCD0002 /* AppDelegate.swift */,
+				ABCD1234ABCD1234ABCD0003 /* Model.swift */,
+				ABCD1234ABCD1234ABCD0004 /* CornerMonitor.swift */,
+				ABCD1234ABCD1234ABCD000B /* CornerTrigger.swift */,
+				ABCD1234ABCD1234ABCD0005 /* ActionRunner.swift */,
+				ABCD1234ABCD1234ABCD0006 /* SettingsView.swift */,
+				ABCD1234ABCD1234ABCD0007 /* SystemHotCorners.swift */,
+			);
+			name = MoreCorners;
+			path = Sources/MoreCorners;
+			sourceTree = "<group>";
+		};
+		ABCD1234ABCD1234ABCD0203 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				ABCD1234ABCD1234ABCD0009 /* MoreCorners.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		ABCD1234ABCD1234ABCD0401 /* MoreCorners */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = ABCD1234ABCD1234ABCD0702 /* Build configuration list for PBXNativeTarget "MoreCorners" */;
+			buildPhases = (
+				ABCD1234ABCD1234ABCD0301 /* Sources */,
+				ABCD1234ABCD1234ABCD0302 /* Frameworks */,
+				ABCD1234ABCD1234ABCD0303 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MoreCorners;
+			productName = MoreCorners;
+			productReference = ABCD1234ABCD1234ABCD0009 /* MoreCorners.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		ABCD1234ABCD1234ABCD0501 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1500;
+			};
+			buildConfigurationList = ABCD1234ABCD1234ABCD0701 /* Build configuration list for PBXProject "MoreCorners" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = ABCD1234ABCD1234ABCD0201;
+			productRefGroup = ABCD1234ABCD1234ABCD0203 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				ABCD1234ABCD1234ABCD0401 /* MoreCorners */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		ABCD1234ABCD1234ABCD0303 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ABCD1234ABCD1234ABCD0108 /* AppIcon.icns in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		ABCD1234ABCD1234ABCD0301 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ABCD1234ABCD1234ABCD0101 /* main.swift in Sources */,
+				ABCD1234ABCD1234ABCD0102 /* AppDelegate.swift in Sources */,
+				ABCD1234ABCD1234ABCD0103 /* Model.swift in Sources */,
+				ABCD1234ABCD1234ABCD0104 /* CornerMonitor.swift in Sources */,
+				ABCD1234ABCD1234ABCD0109 /* CornerTrigger.swift in Sources */,
+				ABCD1234ABCD1234ABCD0105 /* ActionRunner.swift in Sources */,
+				ABCD1234ABCD1234ABCD0106 /* SettingsView.swift in Sources */,
+				ABCD1234ABCD1234ABCD0107 /* SystemHotCorners.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		ABCD1234ABCD1234ABCD0601 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		ABCD1234ABCD1234ABCD0602 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		ABCD1234ABCD1234ABCD0603 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = P52946XHRJ;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.nwf.MoreCorners;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		ABCD1234ABCD1234ABCD0604 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = P52946XHRJ;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.nwf.MoreCorners;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		ABCD1234ABCD1234ABCD0701 /* Build configuration list for PBXProject "MoreCorners" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ABCD1234ABCD1234ABCD0601 /* Debug */,
+				ABCD1234ABCD1234ABCD0602 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		ABCD1234ABCD1234ABCD0702 /* Build configuration list for PBXNativeTarget "MoreCorners" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ABCD1234ABCD1234ABCD0603 /* Debug */,
+				ABCD1234ABCD1234ABCD0604 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = ABCD1234ABCD1234ABCD0501 /* Project object */;
+}

@@ -1,0 +1,14 @@
+.build/
+MoreCorners.app/
+AppIcon.iconset/
+.DS_Store
+
+# Xcode per-user state (shared xcshareddata stays tracked)
+xcuserdata/
+*.xcuserstate
+
+# SwiftPM ↔ Xcode integration (per-user)
+.swiftpm/
+
+# Only if DerivedData is relocated project-relative
+DerivedData/
