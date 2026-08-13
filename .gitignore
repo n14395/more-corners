@@ -1,6 +1,7 @@
 .build/
 MoreCorners.app/
 AppIcon.iconset/
+*.dmg
 .DS_Store
 
 # Xcode per-user state (shared xcshareddata stays tracked)

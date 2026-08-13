@@ -13,9 +13,10 @@ menu bar / spaces, Quick Note and Show Desktop below) rather than an empty grid;
 Three equivalent ways:
 
 ```sh
-./build.sh run    # build MoreCorners.app and (re)launch it
-./build.sh        # just build the bundle
-make run          # same via make (also: make build / make app / make clean)
+./build.sh run    # build MoreCorners.app and (re)launch it (no .dmg)
+./build.sh        # build the bundle AND package MoreCorners-<version>.dmg
+./build.sh app    # build the bundle only, no .dmg (faster dev loop)
+make run          # same via make (also: make build / app / dmg / clean)
 open MoreCorners.xcodeproj   # edit/build/run in Xcode (⌘R)
 ```
 
@@ -31,6 +32,28 @@ menu bar icon (top-left-corner rectangle) → **Settings…**. If you hide the m
 bar icon (see Behavior options), reopen Settings by **launching MoreCorners
 again** from Finder, Spotlight, or Launchpad — the running app routes the
 re-launch to a Settings window instead of starting a second copy.
+
+## Distributing
+
+A plain `./build.sh` (or `make dmg`) also packages **`MoreCorners-<version>.dmg`**
+— a compressed, drag-to-install image containing the app and an `/Applications`
+alias — ready to attach to a GitHub release. It's a build artifact, so it's
+gitignored rather than committed.
+
+**Gatekeeper caveat:** the app is signed with an **Apple Development** (or
+ad-hoc) certificate, *not* a Developer ID with notarization. On another Mac,
+Gatekeeper will therefore refuse to open it on a double-click. Until the app is
+notarized, tell users to either:
+
+- **right-click the app → Open**, then confirm once, or
+- run `xattr -dr com.apple.quarantine /Applications/MoreCorners.app` after
+  copying it in.
+
+Removing the warning entirely requires a paid Apple Developer account: sign with
+a **Developer ID Application** certificate and notarize the `.dmg`
+(`xcrun notarytool submit … --wait` then `xcrun stapler staple`). Set
+`CODESIGN_IDENTITY="Developer ID Application: …"` before `./build.sh` to sign
+with it; the notarize/staple steps are not yet scripted.
 
 ## Project layout
 
