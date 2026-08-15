@@ -34,6 +34,10 @@ enum ActionRunner {
         case .previousSpace: SpaceControl.switchSpace(next: false)
         case .moveWindowNextSpace: SpaceControl.moveFocusedWindow(next: true)
         case .moveWindowPreviousSpace: SpaceControl.moveFocusedWindow(next: false)
+        case .windowLeftHalf: tileWindow(.leftHalf)
+        case .windowRightHalf: tileWindow(.rightHalf)
+        case .windowMaximize: tileWindow(.maximize)
+        case .windowCenter: tileWindow(.center)
         case .openControlCenter:
             pressMenuExtra(identifierSuffix: "menuextra.controlcenter")
         case .openNotificationCenter:
@@ -77,6 +81,8 @@ enum ActionRunner {
         // MARK: Sound & Media
         case .muteToggle:
             appleScript("set volume output muted (not (output muted of (get volume settings)))")
+        case .muteMicToggle:
+            if AudioInput.toggleMute() == nil { NSSound.beep() }
         case .volumeUp:
             appleScript("set volume output volume (((output volume of (get volume settings)) + 7) as integer)")
         case .volumeDown:
@@ -205,6 +211,11 @@ enum ActionRunner {
 
     private static func openApp(at path: String) {
         NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: path), configuration: .init())
+    }
+
+    private static func tileWindow(_ tiling: SpaceControl.WindowTiling) {
+        guard checkAccessibility() else { return }
+        SpaceControl.tileFocusedWindow(tiling)
     }
 
     private static func lockScreen() {

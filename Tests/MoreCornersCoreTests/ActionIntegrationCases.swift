@@ -49,6 +49,11 @@ extension ActionIntegrationTests {
             ActionTestCase(type: .previousSpace),
             ActionTestCase(type: .moveWindowNextSpace, destructive: true),
             ActionTestCase(type: .moveWindowPreviousSpace, destructive: true),
+            // Tiling moves the user's real frontmost window — destructive gate.
+            ActionTestCase(type: .windowLeftHalf, destructive: true),
+            ActionTestCase(type: .windowRightHalf, destructive: true),
+            ActionTestCase(type: .windowMaximize, destructive: true),
+            ActionTestCase(type: .windowCenter, destructive: true),
             ActionTestCase(type: .hideFrontApp, destructive: true),
             ActionTestCase(type: .hideOthers, destructive: true),
             ActionTestCase(type: .quitFrontApp, destructive: true),
@@ -77,6 +82,7 @@ extension ActionIntegrationTests {
 
         // MARK: Sound & Media
         let muted = Box<Bool>()
+        let micMuted = Box<Bool>()
         let volUp = Box<Int>()
         let volDown = Box<Int>()
         cases += [
@@ -85,6 +91,14 @@ extension ActionIntegrationTests {
                 setUp: { muted.value = readMuted() },
                 observe: { readMuted() != (muted.value ?? false) },
                 tearDown: { setMuted(muted.value ?? false) }),
+            ActionTestCase(
+                type: .muteMicToggle,
+                precondition: { AudioInput.isMuted() != nil },
+                setUp: { micMuted.value = AudioInput.isMuted() },
+                observe: { AudioInput.isMuted() != micMuted.value },
+                tearDown: {
+                    if AudioInput.isMuted() != micMuted.value { AudioInput.toggleMute() }
+                }),
             ActionTestCase(
                 type: .volumeUp,
                 setUp: { volUp.value = readVolume() },

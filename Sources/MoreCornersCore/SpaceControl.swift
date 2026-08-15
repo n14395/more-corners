@@ -110,6 +110,53 @@ enum SpaceControl {
         }
     }
 
+    // MARK: - Window tiling (halves / maximize / center)
+
+    enum WindowTiling {
+        case leftHalf, rightHalf, maximize, center
+    }
+
+    /// Move the focused window to a tiled position within the visible area
+    /// (frame minus menu bar and Dock) of the display it is currently on.
+    static func tileFocusedWindow(_ tiling: WindowTiling) {
+        guard let (_, element) = focusedWindowElement(),
+              let window = axFrame(element) else { NSSound.beep(); return }
+        // AX frames are top-left-origin; NSScreen frames are bottom-left.
+        // Convert through the primary screen's height to find the window's
+        // screen and to express its visibleFrame in AX coordinates.
+        let primaryTop = NSScreen.screens.first?.frame.maxY ?? 0
+        let centerNS = NSPoint(x: window.midX, y: primaryTop - window.midY)
+        let screen = NSScreen.screens.first { NSMouseInRect(centerNS, $0.frame, false) }
+            ?? NSScreen.main
+        guard let visibleNS = screen?.visibleFrame else { NSSound.beep(); return }
+        let visible = CGRect(x: visibleNS.minX, y: primaryTop - visibleNS.maxY,
+                             width: visibleNS.width, height: visibleNS.height)
+        setAXFrame(element, tiledFrame(tiling, window: window, visible: visible))
+    }
+
+    /// The frame a tiling produces within a display's visible area. Both rects
+    /// share one coordinate space. `center` keeps the window's size (clamped to
+    /// fit). Pure — exposed for unit testing.
+    static func tiledFrame(_ tiling: WindowTiling, window: CGRect, visible: CGRect) -> CGRect {
+        switch tiling {
+        case .leftHalf:
+            return CGRect(x: visible.minX, y: visible.minY,
+                          width: (visible.width / 2).rounded(), height: visible.height)
+        case .rightHalf:
+            let width = (visible.width / 2).rounded()
+            return CGRect(x: visible.maxX - width, y: visible.minY,
+                          width: width, height: visible.height)
+        case .maximize:
+            return visible
+        case .center:
+            let width = min(window.width, visible.width)
+            let height = min(window.height, visible.height)
+            return CGRect(x: visible.minX + ((visible.width - width) / 2).rounded(),
+                          y: visible.minY + ((visible.height - height) / 2).rounded(),
+                          width: width, height: height)
+        }
+    }
+
     /// Distributed-notification names a peer space manager can observe to stand
     /// its event tap down while MoreCorners performs a title-bar-drag window move.
     static let moveBeganNotification = "dev.nwf.MoreCorners.windowMoveBegan"

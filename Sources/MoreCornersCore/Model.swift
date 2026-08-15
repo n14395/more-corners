@@ -83,6 +83,7 @@ enum ActionType: String, Codable, CaseIterable, Hashable {
     case missionControl, appExpose, showDesktop, launchpad
     case openControlCenter, openNotificationCenter, openAppleMenu, openQuickNote
     case nextSpace, previousSpace, moveWindowNextSpace, moveWindowPreviousSpace
+    case windowLeftHalf, windowRightHalf, windowMaximize, windowCenter
     case hideFrontApp, hideOthers, quitFrontApp
 
     // Display & Power
@@ -90,7 +91,7 @@ enum ActionType: String, Codable, CaseIterable, Hashable {
     case toggleKeepAwake, brightnessUp, brightnessDown, logOut
 
     // Sound & Media
-    case muteToggle, volumeUp, volumeDown, playPause, nextTrack, previousTrack
+    case muteToggle, muteMicToggle, volumeUp, volumeDown, playPause, nextTrack, previousTrack
 
     // Capture
     case screenshotArea, screenshotFull
@@ -106,12 +107,14 @@ enum ActionType: String, Codable, CaseIterable, Hashable {
         case .none, .missionControl, .appExpose, .showDesktop, .launchpad,
              .openControlCenter, .openNotificationCenter, .openAppleMenu, .openQuickNote,
              .nextSpace, .previousSpace, .moveWindowNextSpace, .moveWindowPreviousSpace,
+             .windowLeftHalf, .windowRightHalf, .windowMaximize, .windowCenter,
              .hideFrontApp, .hideOthers, .quitFrontApp:
             return .windows
         case .lockScreen, .screenSaver, .displaySleep, .systemSleep,
              .toggleKeepAwake, .brightnessUp, .brightnessDown, .logOut:
             return .power
-        case .muteToggle, .volumeUp, .volumeDown, .playPause, .nextTrack, .previousTrack:
+        case .muteToggle, .muteMicToggle, .volumeUp, .volumeDown, .playPause,
+             .nextTrack, .previousTrack:
             return .media
         case .screenshotArea, .screenshotFull:
             return .capture
@@ -138,6 +141,10 @@ enum ActionType: String, Codable, CaseIterable, Hashable {
         case .previousSpace: return "Previous Space"
         case .moveWindowNextSpace: return "Move App to Next Space"
         case .moveWindowPreviousSpace: return "Move App to Previous Space"
+        case .windowLeftHalf: return "Move Window to Left Half"
+        case .windowRightHalf: return "Move Window to Right Half"
+        case .windowMaximize: return "Maximize Window"
+        case .windowCenter: return "Center Window"
         case .hideFrontApp: return "Hide Frontmost App"
         case .hideOthers: return "Hide All Other Apps"
         case .quitFrontApp: return "Quit Frontmost App"
@@ -150,6 +157,7 @@ enum ActionType: String, Codable, CaseIterable, Hashable {
         case .brightnessDown: return "Brightness Down"
         case .logOut: return "Log Out…"
         case .muteToggle: return "Toggle Mute"
+        case .muteMicToggle: return "Toggle Microphone Mute"
         case .volumeUp: return "Volume Up"
         case .volumeDown: return "Volume Down"
         case .playPause: return "Play / Pause"
@@ -203,10 +211,20 @@ enum ActionType: String, Codable, CaseIterable, Hashable {
         case .brightnessUp, .brightnessDown, .playPause, .nextTrack, .previousTrack,
              .pressKeys, .openControlCenter, .openNotificationCenter,
              .openAppleMenu, .openQuickNote,
-             .nextSpace, .previousSpace, .moveWindowNextSpace, .moveWindowPreviousSpace:
+             .nextSpace, .previousSpace, .moveWindowNextSpace, .moveWindowPreviousSpace,
+             .windowLeftHalf, .windowRightHalf, .windowMaximize, .windowCenter:
             return true
         default:
             return false
+        }
+    }
+
+    /// Actions that discard or end something the user may not have meant to —
+    /// guarded by the opt-in "ask before destructive actions" setting.
+    var isDestructive: Bool {
+        switch self {
+        case .quitFrontApp, .emptyTrash, .logOut: return true
+        default: return false
         }
     }
 }
@@ -302,6 +320,11 @@ final class AppSettings: ObservableObject {
     /// zone) rather than dwelling inside a `cornerSize` zone. Ignores `dwell`
     /// and `cornerSize`.
     @Published var slamToActivate = false
+    /// Ask before corner-triggered destructive actions (Quit Frontmost App,
+    /// Empty Trash, Log Out). The menu and ▶ test buttons never ask.
+    @Published var confirmDestructive = false
+    /// Show a progress ring + action name while the pointer dwells in a corner.
+    @Published var feedbackDwellHint = false
 
     private struct Snapshot: Codable {
         var corners: [Corner: CornerConfig]
@@ -319,6 +342,8 @@ final class AppSettings: ObservableObject {
         var feedbackHaptic: Bool?
         var feedbackSoundName: String?
         var slamToActivate: Bool?
+        var confirmDestructive: Bool?
+        var feedbackDwellHint: Bool?
     }
 
     // v1 stored a single action + modifier requirement per corner.
@@ -431,7 +456,8 @@ final class AppSettings: ObservableObject {
                  suppressInFullScreen: suppressInFullScreen, excludedApps: excludedApps,
                  feedbackFlash: feedbackFlash, feedbackSound: feedbackSound,
                  feedbackHaptic: feedbackHaptic, feedbackSoundName: feedbackSoundName,
-                 slamToActivate: slamToActivate)
+                 slamToActivate: slamToActivate, confirmDestructive: confirmDestructive,
+                 feedbackDwellHint: feedbackDwellHint)
     }
 
     /// The built-in default configuration. This is the layout a fresh install
@@ -457,7 +483,8 @@ final class AppSettings: ObservableObject {
             corners: corners, dwell: 0.05, cornerSize: 16, allScreens: true,
             enabled: true, showMenuBarIcon: true, suppressInFullScreen: false,
             excludedApps: [], feedbackFlash: true, feedbackSound: false,
-            feedbackHaptic: true, feedbackSoundName: "Purr", slamToActivate: false)
+            feedbackHaptic: true, feedbackSoundName: "Purr", slamToActivate: false,
+            confirmDestructive: false, feedbackDwellHint: false)
     }
 
     /// Replace all settings (corners and preferences) with the built-in defaults.
@@ -480,6 +507,8 @@ final class AppSettings: ObservableObject {
         feedbackHaptic = snap.feedbackHaptic ?? false
         feedbackSoundName = snap.feedbackSoundName ?? "Tink"
         slamToActivate = snap.slamToActivate ?? false
+        confirmDestructive = snap.confirmDestructive ?? false
+        feedbackDwellHint = snap.feedbackDwellHint ?? false
     }
 
     /// Pretty-printed JSON of all settings, for the Export button.

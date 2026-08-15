@@ -1,30 +1,104 @@
 import AppKit
+import Combine
 
 /// Watches the global mouse location and fires corner actions.
 ///
 /// Uses polling of `NSEvent.mouseLocation` (no special permissions needed),
 /// with a dwell delay before firing and a hysteresis zone after firing so an
-/// action runs once per visit to the corner.
+/// action runs once per visit to the corner. Polling is adaptive: fast only
+/// while the pointer is near a corner (or mid-dwell), slow when idle, stopped
+/// while hot corners are disabled, and a bare heartbeat at the lock screen.
 final class CornerMonitor {
     private var triggers: [String: CornerTrigger] = [:]
     private var timer: Timer?
+    private var enabledCancellable: AnyCancellable?
+    /// Lock screen / screensaver: corners never fire there.
+    private var sessionSuspended = false
+    /// True while a destructive-action confirmation alert is up.
+    private var confirmInFlight = false
+
+    /// Poll cadences. Fast matches the old fixed rate; idle saves energy when
+    /// the pointer is nowhere near a corner; suspended is a backstop heartbeat
+    /// while locked (the unlock notification normally wakes us immediately).
+    private static let activeInterval: TimeInterval = 0.05
+    private static let idleInterval: TimeInterval = 0.12
+    private static let suspendedInterval: TimeInterval = 2.0
+    /// Chebyshev distance within which a corner counts as "near" (fast polling).
+    static let nearDistance: CGFloat = 300
 
     func start() {
-        let t = Timer(timeInterval: 0.05, repeats: true) { [weak self] _ in
+        sessionSuspended = Self.sessionIsLocked()
+        observeSessionState()
+        // tick() stops rescheduling while hot corners are disabled, so a
+        // re-enable (menu, Settings, timed-pause expiry) must wake the loop.
+        enabledCancellable = AppSettings.shared.$enabled
+            .removeDuplicates()
+            .sink { [weak self] enabled in
+                if enabled { self?.scheduleTick(after: 0.01) }
+            }
+        scheduleTick(after: 0.01)
+    }
+
+    /// Schedules the next poll, replacing any pending one (idempotent).
+    private func scheduleTick(after interval: TimeInterval) {
+        timer?.invalidate()
+        let t = Timer(timeInterval: interval, repeats: false) { [weak self] _ in
             self?.tick()
         }
+        t.tolerance = interval * 0.2
         RunLoop.main.add(t, forMode: .common)
         timer = t
+    }
+
+    /// Watches lock/unlock and screensaver notifications so polling all but
+    /// stops while no user session is interactive (and can never fire there).
+    private func observeSessionState() {
+        let center = DistributedNotificationCenter.default()
+        let events: [(name: String, suspends: Bool)] = [
+            ("com.apple.screenIsLocked", true),
+            ("com.apple.screenIsUnlocked", false),
+            ("com.apple.screensaver.didstart", true),
+            ("com.apple.screensaver.didstop", false),
+        ]
+        for event in events {
+            center.addObserver(forName: Notification.Name(event.name), object: nil,
+                               queue: .main) { [weak self] _ in
+                guard let self else { return }
+                // On a wake event, re-check the real lock state: the saver can
+                // stop while the screen is still locked.
+                self.sessionSuspended = event.suspends || Self.sessionIsLocked()
+                if !self.sessionSuspended { self.scheduleTick(after: 0.05) }
+            }
+        }
+    }
+
+    /// Whether the login session is at the lock screen, per the window server.
+    static func sessionIsLocked() -> Bool {
+        guard let dict = CGSessionCopyCurrentDictionary() as? [String: Any] else {
+            return false
+        }
+        return (dict["CGSSessionScreenIsLocked"] as? NSNumber)?.boolValue ?? false
     }
 
     private func tick() {
         let settings = AppSettings.shared
         guard settings.enabled else {
-            if !triggers.isEmpty { triggers.removeAll() }
+            triggers.removeAll()
+            DwellHint.hide()
+            return   // no reschedule — the $enabled subscription wakes us
+        }
+        guard !sessionSuspended else {
+            triggers.removeAll()
+            DwellHint.hide()
+            scheduleTick(after: Self.suspendedInterval)
             return
         }
-        // Don't fire while a drag/selection is in progress.
-        guard NSEvent.pressedMouseButtons == 0 else { return }
+        // Don't fire while a drag/selection or a confirmation alert is up.
+        guard NSEvent.pressedMouseButtons == 0, !confirmInFlight else {
+            DwellHint.hide()
+            scheduleTick(after: Self.activeInterval)
+            return
+        }
 
         let pointer = NSEvent.mouseLocation
         let allFrames = NSScreen.screens.map(\.frame)
@@ -38,6 +112,7 @@ final class CornerMonitor {
         // modes, so a jitter in the corner can't double-fire.
         let rearm = max(40, cornerSize * 5)
         let now = Date().timeIntervalSinceReferenceDate
+        var dwellHint: (corner: Corner, screen: NSScreen, progress: Double, label: String)?
 
         for (index, screen) in screens.enumerated() {
             let frame = screen.frame
@@ -61,8 +136,57 @@ final class CornerMonitor {
                 trigger.update(inZone: inZone, beyondRearm: beyondRearm, now: now,
                                dwell: dwell) { self.fire(corner, on: screen) }
                 triggers[key] = trigger
+
+                // Dwell HUD (opt-in): progress toward firing plus what will fire.
+                if case .dwelling(let since) = trigger.phase, inZone,
+                   settings.feedbackDwellHint, dwell >= 0.15 {
+                    let held = ModifierKeys(flags: NSEvent.modifierFlags)
+                    dwellHint = (corner, screen, min(1, (now - since) / dwell),
+                                 Self.dwellLabel(for: settings.config(for: corner),
+                                                 held: held))
+                }
             }
         }
+
+        if let hint = dwellHint {
+            DwellHint.show(corner: hint.corner, on: hint.screen,
+                           progress: hint.progress, label: hint.label)
+        } else {
+            DwellHint.hide()
+        }
+        let near = Self.pointerIsNearACorner(pointer, monitored: screens.map(\.frame),
+                                             all: allFrames)
+        scheduleTick(after: near ? Self.activeInterval : Self.idleInterval)
+    }
+
+    /// Whether the pointer is within `threshold` (Chebyshev) of any exposed
+    /// corner of the monitored frames — tick()'s fast-vs-idle poll decision.
+    /// Pure — exposed for unit testing.
+    static func pointerIsNearACorner(_ pointer: CGPoint, monitored: [CGRect],
+                                     all: [CGRect],
+                                     threshold: CGFloat = nearDistance) -> Bool {
+        for frame in monitored {
+            for corner in Corner.allCases {
+                let cp = point(of: corner, in: frame)
+                guard isExposed(corner: corner, point: cp, allFrames: all) else { continue }
+                if max(abs(pointer.x - cp.x), abs(pointer.y - cp.y)) <= threshold {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    /// The caption for the dwell HUD: the action that will fire for the held
+    /// modifiers — or, when nothing matches yet (a modifier-only corner), a
+    /// hint listing up to two of its modifier variants. Pure — for testing.
+    static func dwellLabel(for config: CornerConfig, held: ModifierKeys) -> String {
+        if let spec = config.resolve(held: held) { return spec.action.label }
+        let hints = config.variants
+            .filter { !$0.modifiers.isEmpty && $0.spec.action != .none }
+            .prefix(2)
+            .map { "\($0.modifiers.symbols) \($0.spec.action.label)" }
+        return hints.isEmpty ? "" : "Hold " + hints.joined(separator: " · ")
     }
 
     private func fire(_ corner: Corner, on screen: NSScreen) -> Bool {
@@ -85,9 +209,37 @@ final class CornerMonitor {
         if settings.shouldSuppress(frontmostBundleID: bundleID, isFullScreen: isFullScreen) {
             return true
         }
+        // Opt-in guard for destructive actions — corner triggers only (the
+        // menu and ▶ test buttons are explicit intent and run immediately).
+        if settings.confirmDestructive && spec.action.isDestructive {
+            presentDestructiveConfirmation(spec, corner: corner, screen: screen)
+            return true
+        }
         ActionRunner.run(spec)
         TriggerFeedback.play(corner: corner, on: screen)
         return true
+    }
+
+    /// Asks before running a destructive corner action. The alert runs outside
+    /// the tick, and `confirmInFlight` keeps the corner from re-firing and
+    /// stacking alerts while one is up.
+    private func presentDestructiveConfirmation(_ spec: ActionSpec, corner: Corner,
+                                                screen: NSScreen) {
+        confirmInFlight = true
+        DispatchQueue.main.async { [weak self] in
+            let alert = NSAlert()
+            alert.messageText = "Run “\(spec.action.label)”?"
+            alert.informativeText = "Triggered by the \(corner.label.lowercased()) hot corner."
+            alert.addButton(withTitle: "Run")
+            alert.addButton(withTitle: "Cancel")
+            NSApp.activate(ignoringOtherApps: true)
+            let confirmed = alert.runModal() == .alertFirstButtonReturn
+            self?.confirmInFlight = false
+            if confirmed {
+                ActionRunner.run(spec)
+                TriggerFeedback.play(corner: corner, on: screen)
+            }
+        }
     }
 
     /// Whether the frontmost app's front window covers its entire display (native

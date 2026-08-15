@@ -17,15 +17,15 @@ Three equivalent ways:
 ./build.sh        # build the bundle AND package MoreCorners-<version>.dmg
 ./build.sh app    # build the bundle only, no .dmg (faster dev loop)
 make run          # same via make (also: make build / app / dmg / clean)
-open MoreCorners.xcodeproj   # edit/build/run in Xcode (⌘R)
+open Package.swift           # edit/run/test in Xcode (no project file needed)
 ```
 
-The shell builds need only the Xcode Command Line Tools. The Xcode project
-shares the same sources and `Info.plist`. Both sign with your Apple
-Development certificate when available (see Permissions below), so TCC grants
-persist across rebuilds. Note that `xcodebuild` from the terminal requires
-full Xcode (`sudo xcode-select -s /Applications/Xcode-beta.app` or prefix
-with `DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer`).
+The shell builds need only the Xcode Command Line Tools and sign with your
+Apple Development certificate when available (see Permissions below), so TCC
+grants persist across rebuilds. For IDE work, opening `Package.swift` in
+Xcode gives full editing, running, and testing without a maintained
+`.xcodeproj` (running the bare executable from Xcode behaves — the app sets
+its accessory activation policy in code). Release builds ship via `build.sh`.
 
 On first launch the settings window opens automatically. After that, use the
 menu bar icon (top-left-corner rectangle) → **Settings…**. If you hide the menu
@@ -58,10 +58,7 @@ with it; the notarize/staple steps are not yet scripted.
 ## Project layout
 
 The logic lives in a `MoreCornersCore` library so it can be unit tested; the
-`MoreCorners` executable is a three-line `main.swift` that calls into it. The
-hand-written Xcode project compiles every source into one app target instead
-(no library), which is why `main.swift` guards its import with
-`#if canImport(MoreCornersCore)`.
+`MoreCorners` executable is a three-line `main.swift` that calls into it.
 
 ```
 Sources/MoreCorners/main.swift        # executable entry point
@@ -125,9 +122,9 @@ Requirements & caveats for the harness:
 
 | Group | Actions |
 |---|---|
-| Windows & Desktop | Mission Control, Application Windows, Show Desktop, Launchpad/Apps, Open Control Center, Open Notification Center, Open Apple Menu, Open Quick Note, Next Space, Previous Space, Move App to Next/Previous Space, Hide Frontmost App, Hide All Other Apps, Quit Frontmost App |
+| Windows & Desktop | Mission Control, Application Windows, Show Desktop, Launchpad/Apps, Open Control Center, Open Notification Center, Open Apple Menu, Open Quick Note, Next Space, Previous Space, Move App to Next/Previous Space, Move Window to Left/Right Half, Maximize Window, Center Window, Hide Frontmost App, Hide All Other Apps, Quit Frontmost App |
 | Display & Power | Lock Screen, Start Screen Saver, Display Sleep, System Sleep, Toggle Keep Awake, Brightness Up/Down, Log Out |
-| Sound & Media | Toggle Mute, Volume Up/Down, Play/Pause, Next/Previous Track |
+| Sound & Media | Toggle Mute, Toggle Microphone Mute, Volume Up/Down, Play/Pause, Next/Previous Track |
 | Capture | Screenshot Area → Clipboard, Screenshot Screen → Desktop |
 | System | Toggle Dark Mode, Toggle Dock Auto-Hide, Empty Trash |
 | Open & Run | Launch App, Open URL, Open File/Folder, Run Shell Command, Run AppleScript, Run Shortcuts Shortcut, Press Keyboard Shortcut |
@@ -183,7 +180,14 @@ import/export), and **Exclusions** (the per-app list).
 - **Trigger feedback** — optional confirmation when a corner fires, useful for
   actions with no visible effect: a **corner flash** (a soft glow at the corner
   that fired), a **system sound** (choose which), and/or a **haptic tap** (Force
-  Touch trackpads). Any combination.
+  Touch trackpads). Any combination. A separate **progress ring while
+  dwelling** option shows a small HUD at the corner as the dwell elapses — a
+  ring filling toward the trigger plus the name of the action about to fire
+  (it live-updates as you press modifiers, and hints a modifier-only corner's
+  variants). Needs a trigger delay of at least 0.15 s.
+- **Ask before destructive actions** (off by default) — corner-triggered Quit
+  Frontmost App, Empty Trash, and Log Out show a Run/Cancel confirmation
+  first. The menu and ▶ test buttons always run immediately.
 - **Export / Import / Reset Settings** — save all settings to a JSON file and
   load them back (backup or move between Macs), or reset everything to the
   built-in default layout. Older exports still load — fields added later fall
@@ -201,8 +205,14 @@ import/export), and **Exclusions** (the per-app list).
   a dot while Keep Awake is on.
 - **Pause** — the menu bar item pauses hot corners indefinitely or for a set
   time (15 min / 1 hour / 2 hours / until tomorrow morning); a timed pause shows
-  its resume time and auto-resumes. Turning corners back on cancels it.
+  its resume time and auto-resumes. Turning corners back on cancels it. The
+  deadline persists, so a timed pause survives an app relaunch (resuming
+  immediately if it expired in the meantime).
 - Actions never fire while a mouse button is down (drags/selections are safe).
+- Corners never fire at the lock screen or while the screensaver is running,
+  and polling drops to a bare heartbeat there. Polling is adaptive generally:
+  fast only while the pointer is near a corner, slower when idle, stopped
+  while hot corners are paused.
 - After firing, the pointer must leave the corner area before it can re-arm.
 - Multi-display: menu bar actions (Apple Menu, Control Center, Notification
   Center) open on the display whose corner you hit, not the focused one —
@@ -236,7 +246,7 @@ Some actions need one-time grants:
 
 | Permission | Needed by |
 |---|---|
-| Accessibility | Play/Pause, Next/Previous Track, Brightness, Press Keyboard Shortcut, Open Control Center, Open Notification Center, Open Apple Menu, Open Quick Note, Next/Previous Space, Move App to Next/Previous Space |
+| Accessibility | Play/Pause, Next/Previous Track, Brightness, Press Keyboard Shortcut, Open Control Center, Open Notification Center, Open Apple Menu, Open Quick Note, Next/Previous Space, Move App to Next/Previous Space, Move Window to Left/Right Half, Maximize/Center Window |
 
 Quick Note (fn+Q) and Notification Center (fn+N) work by synthesizing the
 built-in globe shortcuts, so those must remain enabled in System Settings →
@@ -246,10 +256,9 @@ depend on a shortcut — see the notes below.)
 | Screen Recording | Screenshot actions (macOS prompts via `screencapture`) |
 
 `build.sh` signs with your Apple Development certificate when one is in the
-keychain (override with `CODESIGN_IDENTITY=<hash-or-name>`), and the Xcode
-project uses team-based automatic signing. Developer-cert TCC grants are keyed
-to team + bundle ID, so **permissions survive rebuilds** — and script builds
-and Xcode builds share the same grants. Only if no certificate is found does
+keychain (override with `CODESIGN_IDENTITY=<hash-or-name>`). Developer-cert
+TCC grants are keyed
+to team + bundle ID, so **permissions survive rebuilds**. Only if no certificate is found does
 the script fall back to ad-hoc signing, where every rebuild resets permissions
 (the build output warns when this happens).
 

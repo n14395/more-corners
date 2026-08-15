@@ -165,12 +165,14 @@ struct SettingsView: View {
                     }
                     Toggle("Pause in full-screen apps", isOn: $settings.suppressInFullScreen)
                         .help("When the frontmost window covers the whole screen (video, games, presentations), hot corners won't fire.")
+                    Toggle("Ask before destructive actions", isOn: $settings.confirmDestructive)
+                        .help("Corner-triggered Quit Frontmost App, Empty Trash, and Log Out show a confirmation first. The menu and ▶ test buttons always run immediately.")
                 }
                 .padding(6)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            GroupBox("Feedback when a corner fires") {
+            GroupBox("Feedback") {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Confirms a corner triggered — useful for actions with no visible effect.")
                         .font(.caption).foregroundStyle(.secondary)
@@ -178,6 +180,8 @@ struct SettingsView: View {
                         Toggle("Corner flash", isOn: $settings.feedbackFlash)
                         Toggle("Haptic tap", isOn: $settings.feedbackHaptic)
                             .help("Force Touch trackpads only.")
+                        Toggle("Progress ring while dwelling", isOn: $settings.feedbackDwellHint)
+                            .help("While the pointer waits in a corner, show a filling ring and the name of the action about to fire. Needs a trigger delay of at least 0.15 s.")
                     }
                     HStack(spacing: 8) {
                         Toggle("Sound", isOn: $settings.feedbackSound)

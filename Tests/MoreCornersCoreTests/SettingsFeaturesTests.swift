@@ -116,5 +116,30 @@ final class SettingsFeaturesTests: XCTestCase {
         XCTAssertEqual(s.cornerSize, 16)
         XCTAssertTrue(s.feedbackHaptic)
         XCTAssertFalse(s.slamToActivate)
+        XCTAssertFalse(s.confirmDestructive)
+        XCTAssertFalse(s.feedbackDwellHint)
+    }
+
+    // MARK: Confirm-destructive / dwell-hint toggles
+
+    func testNewTogglesRoundTripAndDefaultOff() throws {
+        let s = AppSettings.shared
+        let saved = try XCTUnwrap(s.exportData())
+        defer { s.importData(saved) }
+
+        s.confirmDestructive = true
+        s.feedbackDwellHint = true
+        let data = try XCTUnwrap(s.exportData())
+        s.confirmDestructive = false
+        s.feedbackDwellHint = false
+        XCTAssertTrue(s.importData(data))
+        XCTAssertTrue(s.confirmDestructive)
+        XCTAssertTrue(s.feedbackDwellHint)
+
+        // A pre-toggle export lacks the keys entirely → both default off.
+        let older = #"{"corners":[],"dwell":0.3,"cornerSize":6,"allScreens":true,"enabled":true}"#
+        XCTAssertTrue(s.importData(Data(older.utf8)))
+        XCTAssertFalse(s.confirmDestructive)
+        XCTAssertFalse(s.feedbackDwellHint)
     }
 }

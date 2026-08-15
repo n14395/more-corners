@@ -16,6 +16,26 @@ public enum MoreCornersApp {
     }
 }
 
+/// Restoring a persisted timed pause at launch. The deadline is stored in
+/// UserDefaults (separate from the settings snapshot — it's transient state,
+/// not configuration) because `enabled == false` *is* persisted: without this,
+/// "pause for an hour" followed by a relaunch would be paused forever.
+enum TimedPause {
+    static let defaultsKey = "pausedUntil"
+
+    enum Decision: Equatable {
+        case none            // nothing pending (clear any stale stored deadline)
+        case resume          // the deadline passed while the app wasn't running
+        case rearm(Date)     // still pending — restore the deadline and timer
+    }
+
+    /// Pure — exposed for unit testing.
+    static func decide(now: Date, until: Date?, enabled: Bool) -> Decision {
+        guard let until, !enabled else { return .none }
+        return until > now ? .rearm(until) : .resume
+    }
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private var statusItem: NSStatusItem?
@@ -58,6 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self, selector: #selector(refreshStatusIcon),
             name: .keepAwakeChanged, object: nil)
 
+        restoreTimedPause()
         monitor.start()
 
         let defaults = UserDefaults.standard
@@ -254,10 +275,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         pause(until: nineAM ?? Date().addingTimeInterval(12 * 3600))
     }
 
-    /// Pause hot corners until `date`, scheduling an auto-resume.
+    /// Pause hot corners until `date`, scheduling an auto-resume. The deadline
+    /// is persisted so the pause stays *timed* across an app relaunch.
     private func pause(until date: Date) {
         pauseTimer?.invalidate()
         pausedUntil = date
+        UserDefaults.standard.set(date, forKey: TimedPause.defaultsKey)
         let timer = Timer(fire: date, interval: 0, repeats: false) { _ in
             AppSettings.shared.enabled = true
         }
@@ -271,6 +294,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         pauseTimer?.invalidate()
         pauseTimer = nil
         pausedUntil = nil
+        UserDefaults.standard.removeObject(forKey: TimedPause.defaultsKey)
+    }
+
+    /// Resolves a timed pause left over from the previous run: resume if its
+    /// deadline has passed, otherwise restore the deadline and its timer.
+    private func restoreTimedPause() {
+        let stored = UserDefaults.standard.object(forKey: TimedPause.defaultsKey) as? Date
+        switch TimedPause.decide(now: Date(), until: stored,
+                                 enabled: AppSettings.shared.enabled) {
+        case .none:
+            UserDefaults.standard.removeObject(forKey: TimedPause.defaultsKey)
+        case .resume:
+            AppSettings.shared.enabled = true   // the $enabled observer cleans up
+        case .rearm(let until):
+            pause(until: until)
+        }
     }
 
     @objc private func toggleAwake() {

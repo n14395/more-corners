@@ -65,6 +65,11 @@ final class ActionCatalogTests: XCTestCase {
         }
     }
 
+    func testDestructiveActionsAreExactlyTheExpectedSet() {
+        XCTAssertEqual(Set(ActionType.allCases.filter(\.isDestructive)),
+                       [.quitFrontApp, .emptyTrash, .logOut])
+    }
+
     func testCodableRoundTripForActionSpec() throws {
         let spec = ActionSpec(action: .runShell, parameter: "say hi")
         let data = try JSONEncoder().encode(spec)

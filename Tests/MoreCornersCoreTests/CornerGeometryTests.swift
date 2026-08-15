@@ -109,4 +109,24 @@ final class CornerGeometryTests: XCTestCase {
         XCTAssertEqual(CornerMonitor.nudgeOutOfCornerZone(topLeft, bounds: bounds, size: size),
                        CGPoint(x: 1000 + clear, y: -200 + clear))
     }
+
+    // MARK: - Adaptive polling: near-a-corner decision
+
+    func testPointerNearACornerControlsFastPolling() {
+        let frames = [frame]   // 1000×800 lone display
+        XCTAssertTrue(CornerMonitor.pointerIsNearACorner(
+            CGPoint(x: 100, y: 100), monitored: frames, all: frames),
+            "100 pt from the bottom-left corner is near")
+        XCTAssertFalse(CornerMonitor.pointerIsNearACorner(
+            CGPoint(x: 500, y: 400), monitored: frames, all: frames),
+            "screen center is far from every corner")
+    }
+
+    func testUnexposedCornersDoNotCountAsNear() {
+        // A neighbor covers the primary's top-right corner probe, so proximity
+        // to that (skipped) corner must not force fast polling.
+        let neighbor = CGRect(x: 1000, y: 800, width: 500, height: 500)
+        XCTAssertFalse(CornerMonitor.pointerIsNearACorner(
+            CGPoint(x: 990, y: 790), monitored: [frame], all: [frame, neighbor]))
+    }
 }
