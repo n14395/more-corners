@@ -227,6 +227,13 @@ enum ActionType: String, Codable, CaseIterable, Hashable {
         default: return false
         }
     }
+
+    /// Moves a window between Spaces — the only actions that additionally need
+    /// the Screen Recording grant (the window-server drag they use is a
+    /// cross-process operation macOS gates behind it).
+    var isWindowSpaceMove: Bool {
+        self == .moveWindowNextSpace || self == .moveWindowPreviousSpace
+    }
 }
 
 // MARK: - Per-corner config
@@ -434,6 +441,16 @@ final class AppSettings: ObservableObject {
 
     func config(for corner: Corner) -> CornerConfig {
         corners[corner] ?? CornerConfig()
+    }
+
+    /// Whether any corner is configured (base or a modifier variant) to move a
+    /// window between Spaces — the only actions that need Screen Recording, so
+    /// the Settings permission row appears only when it's actually relevant.
+    var usesWindowSpaceMove: Bool {
+        corners.values.contains { config in
+            config.base.action.isWindowSpaceMove
+                || config.variants.contains { $0.spec.action.isWindowSpaceMove }
+        }
     }
 
     /// Whether hot corners are suppressed for a frontmost app. Pure — for testing.

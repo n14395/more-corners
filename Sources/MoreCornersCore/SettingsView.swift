@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import CoreGraphics
 import SwiftUI
 
 /// Width of the leading column that holds the "Default" label / modifier chips,
@@ -19,12 +20,18 @@ final class SystemCornerModel: ObservableObject {
     func refresh() { assignments = SystemHotCorners.assignments() }
 }
 
-/// Live Accessibility-permission state for the Settings UI. Many actions
-/// (media, brightness, spaces, keystrokes) silently do nothing without it.
+/// Live permission state for the Settings UI. Most actions need Accessibility
+/// (media, brightness, spaces, keystrokes); the Move-App-to-Space actions
+/// additionally need Screen Recording, which gates the cross-process
+/// window-server drag they use (nothing is ever recorded).
 final class PermissionsModel: ObservableObject {
     static let shared = PermissionsModel()
     @Published var accessibilityTrusted = AXIsProcessTrusted()
-    func refresh() { accessibilityTrusted = AXIsProcessTrusted() }
+    @Published var screenRecordingGranted = CGPreflightScreenCaptureAccess()
+    func refresh() {
+        accessibilityTrusted = AXIsProcessTrusted()
+        screenRecordingGranted = CGPreflightScreenCaptureAccess()
+    }
 }
 
 struct SettingsView: View {
@@ -234,7 +241,25 @@ struct SettingsView: View {
                             Image(systemName: "arrow.clockwise")
                         }
                         .buttonStyle(.borderless)
-                        .help("Re-check permission")
+                        .help("Re-check permissions")
+                    }
+                    // Screen Recording is needed only for the Move-App-to-Space
+                    // actions, so this row appears only when one is configured.
+                    if settings.usesWindowSpaceMove {
+                        HStack(spacing: 6) {
+                            Image(systemName: permissions.screenRecordingGranted
+                                  ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                                .foregroundStyle(permissions.screenRecordingGranted ? .green : .orange)
+                            Text(permissions.screenRecordingGranted
+                                 ? "Screen Recording granted — for moving windows between Spaces"
+                                 : "Screen Recording needed to move windows between Spaces")
+                                .font(.callout)
+                                .help("MoreCorners records nothing. macOS gates one app driving another app's windows — which is how “Move App to Next/Previous Space” holds the window while it crosses — behind the Screen Recording permission.")
+                            Spacer()
+                            if !permissions.screenRecordingGranted {
+                                Button("Open Settings…") { openScreenRecordingSettings() }
+                            }
+                        }
                     }
                     Divider()
                     HStack {
@@ -295,6 +320,17 @@ struct SettingsView: View {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
             NSWorkspace.shared.open(url)
         }
+    }
+
+    private func openScreenRecordingSettings() {
+        // Registers MoreCorners in the Screen Recording list (and shows the
+        // system prompt the first time — an app that never asks won't appear in
+        // the list at all), then opens the pane so the toggle is right there.
+        _ = CGRequestScreenCaptureAccess()
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+            NSWorkspace.shared.open(url)
+        }
+        permissions.refresh()
     }
 
     // MARK: - Exclusions tab

@@ -70,6 +70,11 @@ final class ActionCatalogTests: XCTestCase {
                        [.quitFrontApp, .emptyTrash, .logOut])
     }
 
+    func testWindowSpaceMoveActionsAreExactlyTheExpectedSet() {
+        XCTAssertEqual(Set(ActionType.allCases.filter(\.isWindowSpaceMove)),
+                       [.moveWindowNextSpace, .moveWindowPreviousSpace])
+    }
+
     func testCodableRoundTripForActionSpec() throws {
         let spec = ActionSpec(action: .runShell, parameter: "say hi")
         let data = try JSONEncoder().encode(spec)

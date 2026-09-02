@@ -142,4 +142,24 @@ final class SettingsFeaturesTests: XCTestCase {
         XCTAssertFalse(s.confirmDestructive)
         XCTAssertFalse(s.feedbackDwellHint)
     }
+
+    // MARK: usesWindowSpaceMove — drives the Screen Recording permission row
+
+    func testUsesWindowSpaceMoveDetectsBaseAndVariant() {
+        let s = AppSettings.shared
+        let saved = s.corners
+        defer { s.corners = saved }
+
+        s.corners = [.topLeft: CornerConfig(base: ActionSpec(action: .missionControl))]
+        XCTAssertFalse(s.usesWindowSpaceMove, "no move action configured")
+
+        s.corners = [.topLeft: CornerConfig(base: ActionSpec(action: .moveWindowNextSpace))]
+        XCTAssertTrue(s.usesWindowSpaceMove, "base action counts")
+
+        s.corners = [.bottomRight: CornerConfig(
+            base: ActionSpec(action: .showDesktop),
+            variants: [.init(modifiers: .control,
+                             spec: ActionSpec(action: .moveWindowPreviousSpace))])]
+        XCTAssertTrue(s.usesWindowSpaceMove, "a modifier variant counts")
+    }
 }

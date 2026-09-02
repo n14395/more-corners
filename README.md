@@ -155,7 +155,10 @@ shortcuts (fn+Q / fn+N), so those must remain enabled in System Settings
 Accessibility). It holds the window with a genuine window-server drag, and
 macOS gates one process driving another app's windows behind the Screen
 Recording grant — nothing is ever recorded. Without it the move beeps and
-logs a hint instead of moving the window.
+logs a hint instead of moving the window. When one of these actions is
+configured, the Behavior tab shows the Screen Recording status live, with a
+one-click button to the right pane; the row stays hidden otherwise, so the
+permission is only ever asked for when it's actually needed.
 
 ## Building & development
 
