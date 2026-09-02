@@ -5,10 +5,14 @@ import AppKit
 /// SpacesMenu app). On macOS 27+ the gesture events must carry a serialized
 /// IOHID payload in CGEvent field 4205 or the window server ignores them.
 ///
-/// Moving a window between spaces uses the private CGS window-server call. Apple
-/// restricted that call for unentitled apps on macOS 26+, where it silently
-/// no-ops — so the move is *verified* and, when the OS blocks it, the action
-/// beeps and logs instead of pretending it worked.
+/// Moving a window between spaces "holds" the window with a genuine
+/// server-side drag (`SLSDragWindowRelativeToMouse`, via `SkyLight`) and fires
+/// the native "Move a space" shortcut, so the held window rides across — the
+/// mechanism from the WindowShift project. This replaced an earlier
+/// synthetic title-bar grab, which needed a clickable point on the title bar
+/// and so failed on windows with toolbar'd title bars or title bars parked
+/// off-screen. The move is *verified* against the window server and, when it
+/// doesn't land, the action beeps and logs instead of pretending it worked.
 enum SpaceControl {
 
     // MARK: - Public API
@@ -21,27 +25,34 @@ enum SpaceControl {
 
     /// Move the focused window to the adjacent space and follow it there.
     ///
-    /// The private `CGSMoveWindowsToManagedSpace` call no-ops for unentitled apps
-    /// on macOS 26+, so instead we reproduce the manual technique (from SpacesMenu):
-    /// grab the window's title bar with a synthetic mouse-down and, while holding
-    /// it, trigger the native "Move a space" shortcut — the held window rides
-    /// across to the adjacent space and we follow it. Two details are essential:
-    ///  • The mouse events must clear their flags — `CGEventSource(.hidSystemState)`
-    ///    folds in the live hardware modifiers, and since this action is usually
-    ///    triggered with a modifier held (e.g. a ⌃+corner), the grab would become
-    ///    a control-click (right-click) that never picks the window up.
-    ///  • The chord is read live from the user's actual "Move left/right a space"
+    /// The window is "held" by a real server-side drag bound to a synthetic
+    /// mouse-down (`SLSDragWindowRelativeToMouse`), then the native "Move a
+    /// space" shortcut is fired — the held window rides across. Naming the
+    /// window by its `CGWindowID` means nothing on it has to be clickable, so a
+    /// window with a toolbar'd or off-screen title bar moves as easily as any
+    /// other. Details that matter:
+    ///  • The synthetic mouse-down lands on a private overlay (`MoveOverlay`),
+    ///    not on any app — the pointer is at a hot corner when this fires, and
+    ///    a down there would open a menu or click a random window.
+    ///  • The SkyLight bind needs a button-down that has already LANDED, so it
+    ///    happens a beat after the down is posted.
+    ///  • The chord is read live from the user's "Move left/right a space"
     ///    binding (symbolic hotkey 79/81), so a remapped shortcut still works.
-    /// Beeps if the window doesn't arrive.
+    ///  • The cross-process hand-over is gated on the Screen Recording grant;
+    ///    without it the bind reports success and the window never moves, which
+    ///    the after-the-fact verification catches (beep + log).
     static func moveFocusedWindow(next: Bool) {
         guard AXIsProcessTrusted() else { NSSound.beep(); return }
-        guard let (wid, element) = focusedWindowElement() else { NSSound.beep(); return }
+        guard SkyLight.available else {
+            NSLog("MoreCorners: window-server drag SPI unavailable — cannot move window between spaces")
+            NSSound.beep(); return
+        }
+        guard let (wid, element) = focusedWindowElement(),
+              let originalFrame = axFrame(element) else { NSSound.beep(); return }
         guard let (target, _) = adjacentSpace(of: wid, next: next) else {
             NSSound.beep()  // already at an edge, or spaces unreadable
             return
         }
-        guard let grab = titleBarGrabPoint(for: element) else { NSSound.beep(); return }
-        let originalFrame = axFrame(element)
 
         // Drive the user's real "Move left/right a space" shortcut (79/81), read
         // live. Arrow-key chords carry the fn bit, which the plist parse drops —
@@ -54,16 +65,42 @@ enum SpaceControl {
         let wasEnabled = symbolicHotkeyEnabled(hotkeyID)
         if wasEnabled == false { setSymbolicHotkeyEnabled(hotkeyID, true) }
 
+        // Park the overlay at the centre of the display under the pointer — an
+        // on-screen, app-neutral place for the synthetic down to land.
+        let restoreMouse = CGEvent(source: nil)?.location ?? .zero
+        let downPoint = displayCenter(containing: restoreMouse)
+        let overlay = MoveOverlay()
+        overlay.show(atCG: downPoint)
+
         // Ask peer space managers (e.g. SpacesMenu) to stand their event tap down
         // for the move, so the native "Move a space" shortcut reaches the window
-        // server and carries the grabbed window instead of being swallowed.
+        // server and carries the held window instead of being swallowed.
         postMoveCoordination(began: true)
 
         DispatchQueue.global(qos: .userInteractive).async {
+            func finish(landed: Bool) {
+                if wasEnabled == false { setSymbolicHotkeyEnabled(hotkeyID, false) }
+                postMoveCoordination(began: false)
+                overlay.hide()
+                // Restore the cursor just OUTSIDE the corner zone that launched
+                // this, so warping back doesn't immediately re-trigger it.
+                CGWarpMouseCursorPosition(CornerMonitor.restorePointClearOfCornerZones(restoreMouse))
+                if !landed { DispatchQueue.main.async { NSSound.beep() } }
+            }
+
             let src = CGEventSource(stateID: .hidSystemState)
             src?.localEventsSuppressionInterval = 0
             usleep(80_000)   // give the "move began" signal time to reach peers
-            let restoreMouse = CGEvent(source: nil)?.location ?? grab
+
+            // The synthetic down must land ON the overlay; if it isn't on screen
+            // yet it would fall through to an app. Bounded wait, then bail.
+            let ready = Date().addingTimeInterval(0.5)
+            while !overlay.isReady && Date() < ready { usleep(10_000) }
+            guard overlay.isReady else {
+                NSLog("MoreCorners: move overlay never became ready — aborting window move")
+                finish(landed: false); return
+            }
+
             func mouse(_ type: CGEventType, _ point: CGPoint) {
                 CGWarpMouseCursorPosition(point)
                 let e = CGEvent(mouseEventSource: src, mouseType: type,
@@ -85,29 +122,51 @@ enum SpaceControl {
                 return false
             }
 
-            mouse(.mouseMoved, grab); usleep(30_000)
-            mouse(.leftMouseDown, grab); usleep(110_000)                  // single clean grab
+            mouse(.mouseMoved, downPoint); usleep(20_000)
+            mouse(.leftMouseDown, downPoint); usleep(90_000)   // let the down LAND before binding
+
+            // Bind the window to the live button. The offset is the down point
+            // relative to the window's real origin, so the window doesn't jump;
+            // with no drag events posted it stays put and is simply carried by
+            // the space switch.
+            let offset = CGPoint(x: downPoint.x - originalFrame.minX,
+                                 y: downPoint.y - originalFrame.minY)
+            let bindOK = SkyLight.beginDrag(window: wid, offset: offset)
+            if !bindOK { NSLog("MoreCorners: SkyLight window-drag bind failed") }
+            usleep(40_000)
+
             key(modKey, true, keyFlags: flags, flagsChanged: true); usleep(40_000)   // modifiers held
             key(keyCode, true, keyFlags: flags); usleep(40_000)           // "move a space" chord
             key(keyCode, false, keyFlags: flags)
             _ = waitForVisible(target, tries: 40)                         // wait for the viewport flip
-            usleep(120_000)                                               // hold the grab while it lands
+            usleep(120_000)                                               // hold while it lands
             key(modKey, false, keyFlags: [], flagsChanged: true); usleep(30_000)     // modifiers up
-            mouse(.leftMouseUp, grab)                                     // single drop
+            mouse(.leftMouseUp, downPoint)                                // end the drag
 
             var landed = false
             for _ in 0..<16 {
                 if spaceIDs(for: wid).contains(target) { landed = true; break }
                 usleep(50_000)
             }
-            if let f = originalFrame { setAXFrame(element, f) }           // undo any drag displacement
-            // Restore the cursor just OUTSIDE the corner zone that launched this,
-            // so warping back doesn't immediately re-trigger the hot corner.
-            CGWarpMouseCursorPosition(CornerMonitor.restorePointClearOfCornerZones(restoreMouse))
-            if wasEnabled == false { setSymbolicHotkeyEnabled(hotkeyID, false) }
-            postMoveCoordination(began: false)
-            if !landed { DispatchQueue.main.async { NSSound.beep() } }
+            setAXFrame(element, originalFrame)   // defensive: undo any drag drift
+            if !landed {
+                NSLog("MoreCorners: window did not reach the target space (grant Screen Recording for cross-process window drags)")
+            }
+            finish(landed: landed)
         }
+    }
+
+    /// The centre of the active display containing `point` (CG top-left
+    /// coordinates), or the point itself if no display contains it.
+    private static func displayCenter(containing point: CGPoint) -> CGPoint {
+        var ids = [CGDirectDisplayID](repeating: 0, count: 16)
+        var count: UInt32 = 0
+        guard CGGetActiveDisplayList(UInt32(ids.count), &ids, &count) == .success else {
+            return point
+        }
+        let bounds = (0..<Int(count)).map { CGDisplayBounds(ids[$0]) }
+        let display = bounds.first { $0.contains(point) } ?? bounds.first ?? .null
+        return display.isNull ? point : CGPoint(x: display.midX, y: display.midY)
     }
 
     // MARK: - Window tiling (halves / maximize / center)
@@ -209,34 +268,6 @@ enum SpaceControl {
         var wid: UInt32 = 0
         guard getWindow(element, &wid) == .success, wid != 0 else { return nil }
         return (wid, element)
-    }
-
-    /// The grab point for the title-bar drag: the center of the gap between the
-    /// close (red) and minimize (yellow) traffic-light buttons — draggable window
-    /// chrome on every standard window. The area right of the buttons is often a
-    /// unified toolbar/tab bar (Terminal, browsers, Finder) that eats the grab.
-    /// Falls back to just right of the zoom button, then the frame top-center.
-    private static func titleBarGrabPoint(for element: AXUIElement) -> CGPoint? {
-        if let close = buttonRect(element, kAXCloseButtonAttribute as String),
-           let minimize = buttonRect(element, kAXMinimizeButtonAttribute as String) {
-            return CGPoint(x: (close.midX + minimize.midX) / 2,
-                           y: (close.midY + minimize.midY) / 2)
-        }
-        if let zoom = buttonRect(element, kAXZoomButtonAttribute as String) {
-            return CGPoint(x: zoom.maxX + 5, y: zoom.midY)
-        }
-        if let frame = axFrame(element) {
-            return CGPoint(x: frame.midX, y: frame.minY + 11)
-        }
-        return nil
-    }
-
-    /// The AX frame of a window's title-bar button (close / minimize / zoom).
-    private static func buttonRect(_ window: AXUIElement, _ attribute: String) -> CGRect? {
-        var ref: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(window, attribute as CFString, &ref) == .success,
-              let b = ref, CFGetTypeID(b) == AXUIElementGetTypeID() else { return nil }
-        return axFrame(b as! AXUIElement)
     }
 
     /// A representative modifier virtual-key for a flags set, for the flagsChanged

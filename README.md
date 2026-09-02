@@ -145,11 +145,17 @@ actions request standard one-time grants:
 |---|---|
 | Accessibility | Media keys, brightness, keystrokes, Control Center / Notification Center / Apple Menu / Quick Note, Space switching and window moves, window tiling |
 | Automation (System Events / Finder) | Toggle Dark Mode, Empty Trash, Log Out |
-| Screen Recording | Screenshot actions (macOS prompts via `screencapture`) |
+| Screen Recording | Screenshot actions (macOS prompts via `screencapture`); **also Move App to Next/Previous Space** — see below |
 
 Quick Note and Notification Center synthesize the built-in globe
 shortcuts (fn+Q / fn+N), so those must remain enabled in System Settings
 → Keyboard.
+
+**Move App to Next/Previous Space needs Screen Recording** (in addition to
+Accessibility). It holds the window with a genuine window-server drag, and
+macOS gates one process driving another app's windows behind the Screen
+Recording grant — nothing is ever recorded. Without it the move beeps and
+logs a hint instead of moving the window.
 
 ## Building & development
 
@@ -226,16 +232,21 @@ Some of the techniques are unusual enough to be worth documenting:
   Control keyboard settings and acts on the display under the pointer. On
   macOS 27+ these gestures must carry a serialized IOHID payload in
   CGEvent field 4205 (technique shared with the author's SpacesMenu app).
-- **Move App to Next/Previous Space** reproduces the manual gesture,
-  because the private `CGSMoveWindowsToManagedSpace` call silently no-ops
-  for unentitled apps on macOS 26+: it grabs the window's title bar with
-  a synthetic mouse-down (in the gap between the close and minimize
-  buttons — draggable on every window, unlike a toolbar), and while
-  holding, fires your actual "Move a space" binding read live from
-  `com.apple.symbolichotkeys` (remapped chords included). The synthetic
-  mouse events clear their modifier flags so a ⌃+corner trigger doesn't
-  become a control-click. The move is verified against the window server
-  and beeps if the window didn't land.
+- **Move App to Next/Previous Space** "holds" the focused window with a
+  genuine server-side drag (`SLSDragWindowRelativeToMouse`, private
+  SkyLight SPI — the private `CGSMoveWindowsToManagedSpace` teleport call
+  silently no-ops for unentitled apps on macOS 26+) and fires your actual
+  "Move a space" binding, read live from `com.apple.symbolichotkeys`
+  (remapped chords included) — the held window rides across. The window is
+  named by its window-server ID, so **nothing on it has to be clickable**:
+  a window with a toolbar'd title bar, or one parked off-screen, moves as
+  easily as any other. The synthetic mouse-down the drag binds to lands on
+  a private invisible overlay (the pointer is at a hot corner, so a down
+  there would open a menu). The move is verified against the window server
+  and beeps + logs if the window didn't land — the usual cause being a
+  missing Screen Recording grant (see Permissions). This mechanism is
+  ported from the author's WindowShift project, which replaced its own
+  earlier synthetic-title-bar-grab technique the same way.
 - **Coexisting with other space managers**: an app with an event tap on
   the space-switch chord (e.g. SpacesMenu) would swallow the shortcut
   mid-drag. MoreCorners posts `dev.nwf.MoreCorners.windowMoveBegan`/
