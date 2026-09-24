@@ -1,4 +1,8 @@
-# MoreCorners
+<p align="center">
+  <img src="app-icon.png" alt="MoreCorners app icon" width="160" height="160">
+</p>
+
+<h1 align="center">MoreCorners</h1>
 
 **Hot corners for macOS, without the limits.**
 
