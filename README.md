@@ -15,6 +15,8 @@ next Space, tiling it to half the screen, or muting your microphone.
 It lives in the menu bar, needs no permissions to detect corners, and stays
 out of the way when you're not using it.
 
+![The Corners tab: four cards, each with a default action and its modifier overrides](docs/01-corners-tab.png)
+
 ## Features
 
 - **46 actions** across Spaces, window tiling, media, capture, power, and
@@ -53,6 +55,10 @@ On first launch, Settings opens with a working default layout. Change
 everything in the **Corners** tab — each row has a ▶ button to try its action
 immediately.
 
+![A dwell hint in the top-right corner, its progress ring part-filled, reading "Open Notification Center"](docs/02-dwell-ring.png)
+
+![The menu bar menu listing every corner's action, with the modifier variants indented beneath](docs/04-menu-palette.png)
+
 Each corner has a **Default** action plus any number of **"While holding…"**
 rows binding an exact modifier combination to its own action:
 
@@ -60,6 +66,9 @@ rows binding an exact modifier combination to its own action:
 - Hit it holding ⌘ (and a ⌘ row exists) → that action runs instead.
 - Combos match exactly: ⌘⇧ does not trigger the ⌘ row.
 - Leave Default as "None" to make a corner that only fires with modifiers held.
+- Hit a corner again to close what it opened: Mission Control, Application
+  Windows, Show Desktop, Launchpad / Apps and Notification Center all toggle,
+  just like the built-in hot corners.
 
 The menu bar icon gives quick access to every configured action, pause
 controls, Keep Awake, and Settings. You can hide it entirely — to get Settings

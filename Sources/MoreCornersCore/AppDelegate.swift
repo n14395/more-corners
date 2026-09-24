@@ -49,6 +49,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        #if SPARKLE
+        SparkleUpdater.start()
+        #endif
 
         if AppSettings.shared.showMenuBarIcon {
             installStatusItem()
@@ -235,6 +238,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                                action: #selector(openSettings), keyEquivalent: ",")
         prefs.target = self
         menu.addItem(prefs)
+        #if SPARKLE
+        menu.addItem(SparkleUpdater.shared.makeMenuItem())
+        #endif
 
         let quit = NSMenuItem(title: "Quit MoreCorners",
                               action: #selector(NSApplication.terminate(_:)),

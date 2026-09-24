@@ -26,6 +26,8 @@ enum ActionRunner {
         // These use CoreDock notifications — the mechanism the Dock itself
         // listens on — which stays working across macOS releases (unlike the
         // moved Mission Control binary or synthesized ⌃-arrow shortcuts).
+        // The Dock treats each one as a toggle, so hitting the corner again
+        // while its overlay is up dismisses it, as the built-in hot corners do.
         case .missionControl: coreDock("com.apple.expose.awake")
         case .showDesktop: coreDock("com.apple.showdesktop.awake")
         case .appExpose: coreDock("com.apple.expose.front.awake")
@@ -41,10 +43,16 @@ enum ActionRunner {
         case .openControlCenter:
             pressMenuExtra(identifierSuffix: "menuextra.controlcenter")
         case .openNotificationCenter:
-            // fn+N opens Notification Center on the active display; the
-            // focus grab moves the active display to the pointer's first.
+            // Like the built-in hot corner, this toggles: fn+N opens
+            // Notification Center on the active display (the focus grab moves
+            // the active display to the pointer's first), and a hit while the
+            // panel is up dismisses it instead.
             guard checkAccessibility() else { return }
-            withPointerDisplayFocused { postKeystroke(45, flags: .maskSecondaryFn) }
+            if isNotificationCenterOpen() {
+                closeNotificationCenter()
+            } else {
+                withPointerDisplayFocused { postKeystroke(45, flags: .maskSecondaryFn) }
+            }
         case .openAppleMenu: openAppleMenu()
         case .openQuickNote:
             // The system-wide Quick Note globe shortcut (fn+Q, on by default in
@@ -194,6 +202,9 @@ enum ActionRunner {
         unsafeBitCast(sym, to: SendFunc.self)(notification as CFString, 0)
     }
 
+    /// Both paths toggle: the Dock notification by name, and opening the Apps
+    /// launcher a second time dismisses it (verified on macOS 27) — so a
+    /// repeated corner hit closes it, as the built-in Launchpad corner does.
     private static func openLaunchpad() {
         let workspace = NSWorkspace.shared
         // Launchpad exists through macOS 15; macOS 26 replaced it with the
@@ -343,6 +354,39 @@ enum ActionRunner {
         guard AXValueGetValue(posRef as! AXValue, .cgPoint, &position),
               AXValueGetValue(sizeRef as! AXValue, .cgSize, &size) else { return nil }
         return CGRect(origin: position, size: size)
+    }
+
+    /// Dismisses an open Notification Center with Escape, which its panel (the
+    /// key window while it's up) handles directly. Sending fn+N again is what
+    /// a physical press does, but from a running app macOS defers or drops
+    /// that close unpredictably, whereas Escape lands straight away.
+    private static func closeNotificationCenter() {
+        postKeystroke(53, flags: [])   // Escape
+    }
+
+    /// Whether the Notification Center panel is showing: the NotificationCenter
+    /// process then owns an on-screen window covering a whole display (its
+    /// banners and alerts are small). Uses the window list only — no
+    /// permissions, and no window names needed.
+    private static func isNotificationCenterOpen() -> Bool {
+        let pids = Set(NSRunningApplication
+            .runningApplications(withBundleIdentifier: "com.apple.notificationcenterui")
+            .map(\.processIdentifier))
+        guard !pids.isEmpty,
+              let infos = CGWindowListCopyWindowInfo(
+                [.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]]
+        else { return false }
+        let displays = activeDisplayBounds()
+        return infos.contains { info in
+            guard let pid = (info[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value,
+                  pids.contains(pid),
+                  let boundsDict = info[kCGWindowBounds as String],
+                  let rect = CGRect(dictionaryRepresentation: boundsDict as! CFDictionary)
+            else { return false }
+            return displays.contains {
+                CornerMonitor.coversDisplay(windowBounds: rect, displayBounds: $0)
+            }
+        }
     }
 
     private static func activeDisplayBounds() -> [CGRect] {
