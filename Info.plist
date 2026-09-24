@@ -9,7 +9,7 @@
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
-	<string>dev.nwf.MoreCorners</string>
+	<string>com.n14395.MoreCorners</string>
 	<key>CFBundleExecutable</key>
 	<string>MoreCorners</string>
 	<key>CFBundlePackageType</key>

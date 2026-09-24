@@ -202,7 +202,7 @@ the Mac App Store. Fuller notes live in the source comments.
 ## Uninstall
 
 Quit the app, delete `MoreCorners.app`, and run
-`defaults delete dev.nwf.MoreCorners`.
+`defaults delete com.n14395.MoreCorners`.
 
 ## License
 

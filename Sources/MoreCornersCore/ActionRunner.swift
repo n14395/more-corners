@@ -14,7 +14,7 @@ private final class FocusGrabWindow: NSWindow {
 
 extension Notification.Name {
     /// Posted whenever Keep Awake is toggled, so the menu bar icon can update.
-    static let keepAwakeChanged = Notification.Name("dev.nwf.MoreCorners.keepAwakeChanged")
+    static let keepAwakeChanged = Notification.Name("com.n14395.MoreCorners.keepAwakeChanged")
 }
 
 enum ActionRunner {

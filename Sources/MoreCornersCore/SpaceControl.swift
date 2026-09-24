@@ -221,8 +221,8 @@ enum SpaceControl {
 
     /// Distributed-notification names a peer space manager can observe to stand
     /// its event tap down while MoreCorners performs a title-bar-drag window move.
-    static let moveBeganNotification = "dev.nwf.MoreCorners.windowMoveBegan"
-    static let moveEndedNotification = "dev.nwf.MoreCorners.windowMoveEnded"
+    static let moveBeganNotification = "com.n14395.MoreCorners.windowMoveBegan"
+    static let moveEndedNotification = "com.n14395.MoreCorners.windowMoveEnded"
 
     private static func postMoveCoordination(began: Bool) {
         DistributedNotificationCenter.default().postNotificationName(
