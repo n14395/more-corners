@@ -40,7 +40,12 @@ out of the way when you're not using it.
 
 ## Install
 
-Download the latest `MoreCorners-<version>.dmg` from
+```sh
+brew tap n14395/tap
+brew install --cask more-corners
+```
+
+Or download the latest `MoreCorners-<version>.dmg` from
 [Releases](../../releases), open it, and drag **MoreCorners** to Applications.
 Releases are Developer ID signed and notarized, so it opens normally.
 
