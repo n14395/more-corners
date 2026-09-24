@@ -1,3 +1,6 @@
+// Copyright 2026 Nick Fay
+// SPDX-License-Identifier: Apache-2.0
+
 import CoreGraphics
 
 /// Binding to the one SkyLight symbol the space-move needs — ported from the

@@ -198,3 +198,8 @@ the Mac App Store. Fuller notes live in the source comments.
 
 Quit the app, delete `MoreCorners.app`, and run
 `defaults delete dev.nwf.MoreCorners`.
+
+## License
+
+Licensed under the [Apache License, Version 2.0](LICENSE).
+Third-party attribution is in [NOTICE](NOTICE).

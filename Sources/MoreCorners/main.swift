@@ -1,3 +1,6 @@
+// Copyright 2026 Nick Fay
+// SPDX-License-Identifier: Apache-2.0
+
 // In the SwiftPM build the app logic lives in the MoreCornersCore library, so
 // the executable imports it. The hand-written Xcode project compiles every
 // source into one target instead, where MoreCornersApp is already in scope and

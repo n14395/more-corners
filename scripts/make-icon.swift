@@ -1,3 +1,6 @@
+// Copyright 2026 Nick Fay
+// SPDX-License-Identifier: Apache-2.0
+
 // Generates AppIcon.icns for MoreCorners.
 // Usage: swift scripts/make-icon.swift   (run from the repo root)
 // Renders the icon at 1024pt with CoreGraphics, emits an .iconset at all
